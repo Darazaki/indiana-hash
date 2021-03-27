@@ -1,0 +1,15 @@
+[package]
+name = "indiana-hash"
+version = "0.1.0"
+authors = ["Naqua Darazaki <n.darazaki@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+data-encoding = "2.3"
+page_size = "0.4"
+ring = "0.16"
+md-5 = "0.9"
+iui = { path = "libui-rs/iui" }
+
