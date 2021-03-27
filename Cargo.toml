@@ -11,5 +11,5 @@ data-encoding = "2.3"
 page_size = "0.4"
 ring = "0.16"
 md-5 = "0.9"
-iui = { path = "libui-rs/iui" }
+iui = { git = "https://github.com/Darazaki/libui-rs" }
 
