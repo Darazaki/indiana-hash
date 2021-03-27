@@ -38,7 +38,7 @@ trait Hasher {
 
         for data_or_error in receiver {
             match data_or_error {
-                Ok(data) => self.update(data),
+                Ok(data) => self.update(&data),
                 Err(err) => return Err(err),
             }
         }
