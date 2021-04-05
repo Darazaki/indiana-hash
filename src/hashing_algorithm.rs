@@ -3,26 +3,44 @@ use ring::digest;
 use std::{
     fmt,
     io::{self, prelude::*},
+    sync::mpsc,
+    thread,
 };
 
 trait Hasher {
     fn update(&mut self, data: &[u8]);
     fn finish(self) -> String;
 
-    fn calculate<R: BufRead>(mut self, reader: &mut R) -> io::Result<String>
+    fn calculate<R: BufRead + Send + 'static>(
+        mut self,
+        mut reader: R,
+    ) -> io::Result<String>
     where
         Self: Sized,
     {
-        let mut size_read;
+        let (sender, receiver) = mpsc::channel();
 
-        loop {
-            let buffer = reader.fill_buf()?;
+        thread::spawn(move || loop {
+            let buffer = match reader.fill_buf() {
+                Ok(buffer) => buffer,
+                Err(err) => {
+                    sender.send(Err(err)).unwrap();
+                    return;
+                },
+            };
             if buffer.is_empty() {
                 break;
             }
-            size_read = buffer.len();
-            self.update(buffer);
+            let size_read = buffer.len();
+            sender.send(Ok(Vec::from(buffer))).unwrap();
             reader.consume(size_read);
+        });
+
+        for data_or_error in receiver {
+            match data_or_error {
+                Ok(data) => self.update(&data),
+                Err(err) => return Err(err),
+            }
         }
 
         Ok(self.finish())
@@ -55,8 +73,8 @@ pub enum HashingAlgorithm {
     MD5,
 }
 
-fn ring_calculate<R: BufRead>(
-    reader: &mut R,
+fn ring_calculate<R: BufRead + Send + 'static>(
+    reader: R,
     ring_algorithm: &'static digest::Algorithm,
 ) -> io::Result<String> {
     let context = digest::Context::new(ring_algorithm);
@@ -73,7 +91,10 @@ impl HashingAlgorithm {
         HashingAlgorithm::MD5,
     ];
 
-    pub fn calculate<R: BufRead>(self, reader: &mut R) -> io::Result<String> {
+    pub fn calculate<R: BufRead + Send + 'static>(
+        self,
+        reader: R,
+    ) -> io::Result<String> {
         match self {
             HashingAlgorithm::SHA512_256 => {
                 ring_calculate(reader, &digest::SHA512_256)

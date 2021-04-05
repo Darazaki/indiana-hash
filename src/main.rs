@@ -3,10 +3,15 @@
 pub mod hashing_algorithm;
 
 use iui::{
-    controls::{Combobox, Entry, Label, Button, VerticalBox, HorizontalBox},
+    controls::{Button, Combobox, Entry, HorizontalBox, Label, VerticalBox},
     prelude::*,
 };
-use std::{cell::RefCell, fs, io, path::Path, path::PathBuf, rc::Rc};
+use std::{
+    cell::RefCell,
+    fs, io,
+    path::{Path, PathBuf},
+    rc::Rc,
+};
 
 use crate::hashing_algorithm::HashingAlgorithm;
 
@@ -80,15 +85,18 @@ fn main() {
         let window = window.clone();
         let mut filename = filename.clone();
         let mut change_filename = change_filename.clone();
-        move |_| if let Some(path) = window.open_file(&ui) {
-            let visible_path = path.to_string_lossy();
-            filename.set_value(&ui, &visible_path);
-            change_filename(path);
+        move |_| {
+            if let Some(path) = window.open_file(&ui) {
+                let visible_path = path.to_string_lossy();
+                filename.set_value(&ui, &visible_path);
+                change_filename(path);
+            }
         }
     });
 
-    filename.on_changed(&ui,
-        move |new_filename| change_filename(PathBuf::from(new_filename)));
+    filename.on_changed(&ui, move |new_filename| {
+        change_filename(PathBuf::from(new_filename))
+    });
 
     hashing_algorithm.on_selected(&ui, move |new_algorithm_id| {
         *hashing_algorithm_value.borrow_mut() = match new_algorithm_id {
@@ -115,7 +123,7 @@ fn on_calculate_hash(
     filename: &Path,
     hashing_algorithm: Option<HashingAlgorithm>,
 ) -> Result<String, String> {
-    let mut file = io::BufReader::with_capacity(
+    let file = io::BufReader::with_capacity(
         page_size::get(),
         match fs::File::open(filename) {
             Ok(x) => x,
@@ -132,7 +140,7 @@ fn on_calculate_hash(
         },
     };
 
-    match algorithm.calculate(&mut file) {
+    match algorithm.calculate(file) {
         Ok(hash) => Ok(format!("{}: {}", algorithm, hash)),
         Err(err) => Err(format!("Cannot read file: {:?}", err)),
     }
